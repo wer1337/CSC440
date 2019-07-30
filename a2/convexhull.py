@@ -1,6 +1,5 @@
 import math
 import sys
-import collections
 
 EPSILON = sys.float_info.epsilon
 
@@ -107,40 +106,45 @@ points = [(0,1)] x[0], x[1]
 
 
 def computeHull(points):
-    if len(points) < 100:
-        print(points)
     clockwiseSort(points)
-    # stops recursion and starts to create the convex hull of the base
+
+    # Base case because 3 points is a hull
     if len(points) <= 3:
         return points
 
-    # Find the midpoint
+    # Finds the lowest and highest points to get the mid point with
     highest = max(points, key=lambda point: point[0])
     lowest = min(points, key=lambda point: point[0])
 
     midpoint = (highest[0] + lowest[0]) / 2
 
-    # splitting the points
     left_half = []
     right_half = []
 
+    # Splits the points into left and right based off of the mid point
     for i in points:
         if i[0] < midpoint:
             left_half.append(i)
         else:
             right_half.append(i)
 
+    # Recursively calls computeHull
     left_copy = computeHull(left_half)
     right_copy = computeHull(right_half)
 
-    # points = merge1(left_copy, right_copy, midpoint, highest, lowest)
+    # Calls our merge function
     points = merge(left_copy, right_copy, midpoint)
+
+    # Clockwise sort the points because our splicing was awful
     clockwiseSort(points)
     return points
 
 
 '''
-Merge will be merging both left half and right half after it gets called in computeHULL
+The merge function takes in the split left and right hull (x, y) list points and the midpoint.
+It finds the upper and lower tangents to create the hull and returns th
+e points of that hull 
+to be merged recursively in computeHull
 '''
 
 
@@ -150,107 +154,110 @@ def merge(left, right, midpoint):
     # Left most point of right hull
     rh_left = min(right, key=lambda point: point[0])
 
-    # Collections
-    left_hull = left
-    right_hull = right
-
-    points = left_hull + right_hull
-
-    # Gets the index of the left hull right most
-    lh_index = left_hull.index(lh_right)
-    # Gets the index of the right hull left most
+    # Gets the index of the two closest points
+    lh_index = left.index(lh_right)
     rh_index = right.index(rh_left)
 
-    # Puts the rightmost point on the left hull at the end of the list
-    left_hull = left[lh_index + 1:] + left[:lh_index + 1]
-    # Puts the leftmost point on the right hull at the beginning of the list
-    right_hull = right[rh_index:] + right[:rh_index]
+    # Len of Left and Right
+    len_right = len(right)
+    len_left = len(left)
 
-    # Puts the rightmost point on the left hull at the beginning of the list
-    left_hull_copy = left[lh_index:] + left[:lh_index]
-    # Puts the leftmost point on the right hull at the end of the list
-    right_hull_copy = right[rh_index + 1:] + right[:rh_index + 1]
+    # Right Hull
+    uhr_point = right[rh_index]
+    lhr_point = right[rh_index]
+    # Left Hull
+    uhl_point = left[lh_index]
+    lhl_point = left[lh_index]
 
-    urh_point = rh_left
-    ulh_point = lh_right
-    lrh_point = urh_point
-    llh_point = ulh_point
+    # Upper yint
+    upper_yint = yint(uhr_point, uhl_point, midpoint, 0, sys.maxsize)
+    # Lower yint
+    lower_yint = yint(lhr_point, lhl_point, midpoint, 0, sys.maxsize)
 
-    print(left_hull_copy)
+    # Invariant: At every loop, the upper and lower tangents have not been found
+    # Initialization: While True
+    # Maintenance: Given that changed == True, the function will run because there are still potential points to look at
+    # Termination: The uhr_point, lhr_point, uhl_point, and lhl_points have not been changed -meaning these are
+    #               the final upper tangent and lower tangent points that make up the hull because we cannot go any
+    #               further or lower than these points
     while True:
-        outlier = False
+        changed = False
 
-        # UPPER HULL RIGHT
-        for i in range(right_hull.index(urh_point), len(right_hull)):
-            if i < len(right_hull) - 1:
-                if cw(ulh_point, urh_point, right_hull[i + 1]):
-                    urh_point = right_hull[i + 1]
-                else:
-                    break
+        # Compares the current Y-Int to the next value's Y-Int
+        # Upper Hull, Y Int should be lower
+        # Check upper right
+        # if the following points intercept is greater than the current point and
+        # if the current point index is not the length of the list
+        if yint(right[(right.index(uhr_point) + 1) % len_right], uhl_point, midpoint, 0, sys.maxsize)[1] <= upper_yint[
+            1] and \
+                right.index(uhr_point) != ((right.index(uhr_point) + 1) % len_right):
+            # checks to see if the next point is below in case the midpoint lies on one of the tests
+            if right[(right.index(uhr_point) + 1) % len_right][1] > uhr_point[1]:
+                pass
+            else:
+                uhr_point = right[(right.index(uhr_point) + 1) % len_right]
+                upper_yint = yint(uhr_point, uhl_point, midpoint, 0, sys.maxsize)
+                changed = True
 
-        # UPPER HULL LEFT
-        for i in range(left_hull.index(ulh_point), 0, - 1):
-            if i > 0:
-                if cw(ulh_point, urh_point, left_hull[i - 1]):
-                    ulh_point = left_hull[i - 1]
-                else:
-                    break
+        # Check upper left
+        # if the following points intercept is greater than the current point and
+        # if the current point index is not the length of the list
+        if yint(uhr_point, left[(left.index(uhl_point) - 1) % len_left], midpoint, 0, sys.maxsize)[1] <= upper_yint[
+            1] and \
+                left.index(uhl_point) != ((left.index(uhl_point) - 1) % len_left):
+            # checks to see if the next point is below in case the midpoint lies on one of the tests
+            if left[(left.index(uhl_point) - 1) % len_left][1] > uhl_point[1]:
+                pass
+            else:
+                uhl_point = left[(left.index(uhl_point) - 1) % len_left]
+                upper_yint = yint(uhr_point, uhl_point, midpoint, 0, sys.maxsize)
+                changed = True
 
-        # LOWER HULL RIGHT
-        for i in range(right_hull_copy.index(lrh_point), 0, - 1):
-            if i > 0:
-                if ccw(llh_point, lrh_point, right_hull_copy[i - 1]):
-                    lrh_point = right_hull_copy[i - 1]
-                else:
-                    break
+        # Lower Hull, Y Int should be higher
+        # Check lower right
+        # if the following points intercept is less than the current point and
+        # if the current point index is not the length of the list
+        if yint(right[(right.index(lhr_point) - 1) % len_right], lhl_point, midpoint, 0, sys.maxsize)[1] >= lower_yint[
+            1] and \
+                right.index(lhr_point) != ((right.index(lhr_point) - 1) % len_right):
+            # checks to see if the next point is above in case the midpoint lies on one of the tests
+            if right[(right.index(lhr_point) - 1) % len_right][1] < lhr_point[1]:
+                pass
+            else:
+                lhr_point = right[(right.index(lhr_point) - 1) % len_right]
+                lower_yint = yint(lhr_point, lhl_point, midpoint, 0, sys.maxsize)
+                changed = True
 
-        # LOWER HULL LEFT
-        for i in range(left_hull_copy.index(llh_point), len(left_hull_copy)):
-            if i < len(left_hull_copy) - 1:
-                if ccw(llh_point, lrh_point, left_hull_copy[i + 1]):
-                    llh_point = left_hull_copy[i + 1]
-                else:
-                    break
+        # Check lower left
+        # if the following points intercept is less than the current point and
+        # if the current point index is not the length of the list
+        if yint(lhr_point, left[(left.index(lhl_point) + 1) % len_left], midpoint, 0, sys.maxsize)[1] >= lower_yint[
+            1] and \
+                left.index(lhl_point) != ((left.index(lhl_point) + 1) % len_left):
+            # checks to see if the next point is above in case the midpoint lies on one of the tests
+            if left[(left.index(lhl_point) + 1) % len_left][1] < lhl_point[1]:
+                pass
+            else:
+                lhl_point = left[(left.index(lhl_point) + 1) % len_left]
+                lower_yint = yint(lhr_point, lhl_point, midpoint, 0, sys.maxsize)
+                changed = True
 
-        # If there is another index following and
-        # If the intersect of yint @ midpoint is greater than or equal to the following points
-        #
-        if (right_hull.index(urh_point) != len(right_hull) - 1) and \
-                (yint(ulh_point, urh_point, midpoint, 0, sys.maxsize)) >= (yint(ulh_point, right_hull[right_hull.index(urh_point) + 1], midpoint, 0, sys.maxsize)) and \
-                (right_hull[right_hull.index(urh_point) + 1][0] > urh_point[0]) and \
-                (right_hull[right_hull.index(urh_point) + 1][1] < urh_point[1]):
-            outlier = True
-        elif (left_hull.index(ulh_point) != 0) and \
-                (yint(ulh_point, urh_point, midpoint, 0, sys.maxsize)) >= (yint(left_hull[left_hull.index(ulh_point) - 1], urh_point, midpoint, 0, sys.maxsize)) and \
-                (left_hull[left_hull.index(ulh_point) - 1][0] < ulh_point[0]) and \
-                (left_hull[left_hull.index(ulh_point) - 1][1] < ulh_point[1]):
-            outlier = True
-        elif (right_hull_copy.index(lrh_point) != 0) and \
-                (yint(llh_point, lrh_point, midpoint, 0, sys.maxsize)) <= (yint(llh_point, right_hull_copy[right_hull_copy.index(lrh_point) - 1], midpoint, 0, sys.maxsize)) and \
-                (right_hull_copy[right_hull_copy.index(lrh_point) - 1][0] > lrh_point[0]) and \
-                (right_hull_copy[right_hull_copy.index(lrh_point) - 1][1] > lrh_point[1]):
-            outlier = True
-        elif (left_hull_copy.index(llh_point) != len(left_hull_copy) - 1) and \
-                (yint(llh_point, lrh_point, midpoint, 0, sys.maxsize)) <= (yint(left_hull_copy[left_hull_copy.index(llh_point) + 1], lrh_point, midpoint, 0, sys.maxsize)) and \
-                (left_hull_copy[left_hull_copy.index(llh_point) + 1][0] < llh_point[0]) and \
-                (left_hull_copy[left_hull_copy.index(llh_point) + 1][1]) > llh_point[1]:
-            outlier = True
-
-        if not outlier:
-            binding_points = [ulh_point, urh_point, lrh_point, llh_point]
-            points = list(set(points) ^ set(binding_points))
-            removal = []
-
-            x_min = min(binding_points, key=lambda point: point[0])
-            x_max = max(binding_points, key=lambda point: point[0])
-            y_min = min(binding_points, key=lambda point: point[1])
-            y_max = max(binding_points, key=lambda point: point[1])
-
-            for i in points:
-                if (x_min[0] < i[0] < x_max[0]) and (y_min[1] < i[1] < y_max[1]):
-                    removal.append(i)
-
-            points = list(set(points) ^ set(removal) ^ set(binding_points))
+        # If not true, we break out of loop because there are no more changes
+        if not changed:
             break
-    return points
 
+    # Outside of loop
+    r_right = right[right.index(uhr_point):] + right[:right.index(uhr_point)]
+    r_left = left[left.index(lhl_point):] + left[:left.index(lhl_point)]
+
+    # splices the points together
+    points = r_right[:r_right.index(lhr_point)]
+    points.append(lhr_point)
+
+    points = points + r_left[:r_left.index(uhl_point)]
+    points.append(uhl_point)
+
+    # gets rid of duplicates
+    points = list(set(points))
+
+    return points
