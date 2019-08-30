@@ -59,7 +59,10 @@ def shortest_path(start, end):
     end_init = node_info(end, (None, None), 0)
     e_frontier = deque([end_init])
     e_parents = []
-
+    
+    # Flag determines which side we need to advance the frontier
+    # When flag is 1 it means that we might advance the left frontier
+    # When flag is -1 it means we might advance the right frontier
     flag = 1
 
     # Test to see if the two given states (start, end) are the same
@@ -112,14 +115,16 @@ def shortest_path(start, end):
             flag = flag * (-1)
 
         # Checking to see if there is the same block state in each list
-
+        
         """
         Invariant: At each iteration, the position of l_elm in s_frontier is less than the len(s_frontier)
         Initialization: There is a list called s_frontier that has elements in it
         Maintenance: Given that there are still elements in s_frontier to go through, the loop will continue 
         Termination: We have reached the end of s_frontier or the intersection of the two ends has been found
         """
+        # Grabs a left element from the starting frontier
         for l_elm in s_frontier:
+         
             """
             Invariant: At each iteration, the position of r_elm in e_frontier is less than the len(e_frontier)
             Initialization: There is a list called e_frontier that has elements in it
@@ -127,16 +132,22 @@ def shortest_path(start, end):
                          check to see if s_frontier and e_frontier has an intersection
             Termination: We have reached the end of e_frontier or the intersection of the two ends has been found
             """
+            # Compares it to each of the right elements from the end frontier
             for r_elm in e_frontier:
+                # If we find an element that matches
                 if l_elm.st == r_elm.st:
                     # Find the intersect of the two lists
                     intersect = (l_elm, r_elm)
+                    # We set found to true
                     found = True
+                    # Then break out of the loop
                     break
+            # If the element was found we can break out of this loop as well
             if found == True:
                 break
-
+    # Creates a lsit for return
     final_list = []
+    # Temp variable to hold l_elm
     l_temp = intersect[0]
 
     """
@@ -146,6 +157,8 @@ def shortest_path(start, end):
                  added to the beginning of the final solution list. The new node to look at is then updated.
     Termination: We have reached the first parent node of start and now have a list of its path
     """
+    
+    # Gets the parent of l_temp (l_elm) until the start state
     while (l_temp.st != start):
         final_list.insert(0, l_temp.parent[0])
         l_temp = l_temp.parent[1]
@@ -159,6 +172,8 @@ def shortest_path(start, end):
                  added to the end of the final solution list. The new node to look at is then updated.
     Termination: We have reached the first parent node of end and now have a list of its path connecting start to end
     """
+    # Gets the parent of r_temp (r_elm) until the end state
+    # Perm inverse is because we have to do the inverse of each move to get the parent.
     while (r_temp.st != end):
         final_list.append(rubik.perm_inverse(r_temp.parent[0]))
         r_temp = r_temp.parent[1]
